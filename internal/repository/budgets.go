@@ -141,7 +141,6 @@ func (r *budgetsRepository) CreateBudget(ctx context.Context, tx Transaction, bu
 
 	// Create associated streak record
 	streak := model.BudgetStreaks{
-		UserID:       budget.UserID,
 		BudgetID:     budget.ID,
 		StreakCount:  0,
 		StreakActive: false,

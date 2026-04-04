@@ -29,7 +29,6 @@ func (UserBudgets) TableName() string {
 // BudgetStreaks tracks the consecutive months a user stayed under budget
 type BudgetStreaks struct {
 	Base
-	UserID              uuid.UUID `gorm:"type:uuid;not null;index"`
 	BudgetID            uuid.UUID `gorm:"type:uuid;not null;index"`
 	StreakCount         int       `gorm:"default:0"`
 	StreakActive        bool      `gorm:"default:false"`
