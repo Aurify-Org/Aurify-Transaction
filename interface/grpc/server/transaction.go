@@ -22,6 +22,7 @@ type transactionServer struct {
 	transactionService service.TransactionsService
 	categoryService    service.CategoriesService
 	attachmentService  service.AttachmentsService
+	budgetsService     service.BudgetsService
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -691,4 +692,178 @@ func (s *transactionServer) GetCategoryDetail(ctx context.Context, req *tpb.Cate
 		Name:       categoryName,
 		Type:       categoryType,
 	}, nil
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Budget RPCs
+// ──────────────────────────────────────────────────────────────────────────────
+
+func (s *transactionServer) GetBudgets(ctx context.Context, req *tpb.GetBudgetsRequest) (*tpb.GetBudgetsResponse, error) {
+	userID := interceptor.UserIDFromContext(ctx)
+
+	budgets, err := s.budgetsService.GetBudgets(ctx, userID, req.GetPeriod())
+	if err != nil {
+		log.Error(data.LogGetBudgetsFailed, map[string]any{
+			"service": data.GRPCServerService,
+			"user_id": userID,
+			"period":  req.GetPeriod(),
+			"error":   err.Error(),
+		})
+		return nil, fmt.Errorf("get budgets: %w", err)
+	}
+
+	protoBudgets := make([]*tpb.Budget, 0, len(budgets))
+	for _, b := range budgets {
+		protoBudgets = append(protoBudgets, toProtoBudget(b))
+	}
+
+	log.Info(data.LogGetBudgetsSuccess, map[string]any{
+		"service": data.GRPCServerService,
+		"user_id": userID,
+		"period":  req.GetPeriod(),
+		"count":   len(budgets),
+	})
+
+	return &tpb.GetBudgetsResponse{
+		Budgets: protoBudgets,
+	}, nil
+}
+
+func (s *transactionServer) CreateBudget(ctx context.Context, req *tpb.CreateBudgetRequest) (*tpb.Budget, error) {
+	userID := interceptor.UserIDFromContext(ctx)
+
+	budgetReq := dto.BudgetRequest{
+		Scope:        req.GetScope(),
+		MonthlyLimit: req.GetMonthlyLimit(),
+		Period:       req.GetPeriod(),
+	}
+
+	if req.GetCategoryId() != "" {
+		catID := req.GetCategoryId()
+		budgetReq.CategoryID = &catID
+	}
+	if req.GetWalletId() != "" {
+		walletID := req.GetWalletId()
+		budgetReq.WalletID = &walletID
+	}
+
+	budget, err := s.budgetsService.CreateBudget(ctx, userID, budgetReq)
+	if err != nil {
+		log.Error(data.LogCreateBudgetFailed, map[string]any{
+			"service": data.GRPCServerService,
+			"user_id": userID,
+			"error":   err.Error(),
+		})
+		return nil, fmt.Errorf("create budget: %w", err)
+	}
+
+	log.Info(data.LogCreateBudgetSuccess, map[string]any{
+		"service":   data.GRPCServerService,
+		"user_id":   userID,
+		"budget_id": budget.ID,
+	})
+
+	return toProtoBudget(budget), nil
+}
+
+func (s *transactionServer) UpdateBudget(ctx context.Context, req *tpb.UpdateBudgetRequest) (*tpb.Budget, error) {
+	userID := interceptor.UserIDFromContext(ctx)
+
+	updateReq := dto.BudgetUpdateRequest{
+		MonthlyLimit: req.GetMonthlyLimit(),
+	}
+
+	budget, err := s.budgetsService.UpdateBudget(ctx, userID, req.GetId(), updateReq)
+	if err != nil {
+		log.Error(data.LogUpdateBudgetFailed, map[string]any{
+			"service":   data.GRPCServerService,
+			"user_id":   userID,
+			"budget_id": req.GetId(),
+			"error":     err.Error(),
+		})
+		return nil, fmt.Errorf("update budget: %w", err)
+	}
+
+	log.Info(data.LogUpdateBudgetSuccess, map[string]any{
+		"service":   data.GRPCServerService,
+		"user_id":   userID,
+		"budget_id": budget.ID,
+	})
+
+	return toProtoBudget(budget), nil
+}
+
+func (s *transactionServer) DeleteBudget(ctx context.Context, req *tpb.BudgetID) (*tpb.Budget, error) {
+	userID := interceptor.UserIDFromContext(ctx)
+
+	budget, err := s.budgetsService.DeleteBudget(ctx, userID, req.GetId())
+	if err != nil {
+		log.Error(data.LogDeleteBudgetFailed, map[string]any{
+			"service":   data.GRPCServerService,
+			"user_id":   userID,
+			"budget_id": req.GetId(),
+			"error":     err.Error(),
+		})
+		return nil, fmt.Errorf("delete budget: %w", err)
+	}
+
+	log.Info(data.LogDeleteBudgetSuccess, map[string]any{
+		"service":   data.GRPCServerService,
+		"user_id":   userID,
+		"budget_id": budget.ID,
+	})
+
+	return toProtoBudget(budget), nil
+}
+
+func (s *transactionServer) ResetBudget(ctx context.Context, req *tpb.BudgetID) (*tpb.Budget, error) {
+	userID := interceptor.UserIDFromContext(ctx)
+
+	budget, err := s.budgetsService.ResetBudget(ctx, userID, req.GetId())
+	if err != nil {
+		log.Error(data.LogResetBudgetFailed, map[string]any{
+			"service":   data.GRPCServerService,
+			"user_id":   userID,
+			"budget_id": req.GetId(),
+			"error":     err.Error(),
+		})
+		return nil, fmt.Errorf("reset budget: %w", err)
+	}
+
+	log.Info(data.LogResetBudgetSuccess, map[string]any{
+		"service":   data.GRPCServerService,
+		"user_id":   userID,
+		"budget_id": budget.ID,
+	})
+
+	return toProtoBudget(budget), nil
+}
+
+// toProtoBudget converts DTO to protobuf Budget
+func toProtoBudget(b dto.BudgetResponse) *tpb.Budget {
+	pb := &tpb.Budget{
+		Id:           b.ID,
+		UserId:       b.UserID,
+		Scope:        b.Scope,
+		WalletScope:  b.WalletScope,
+		MonthlyLimit: b.MonthlyLimit,
+		CurrentSpent: b.CurrentSpent,
+		Period:       b.Period,
+		StreakCount:  int32(b.StreakCount),
+		StreakActive: b.StreakActive,
+		CreatedAt:    b.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    b.UpdatedAt.Format(time.RFC3339),
+	}
+
+	if b.CategoryID != nil {
+		pb.CategoryId = *b.CategoryID
+	}
+	if b.CategoryName != nil {
+		pb.CategoryName = *b.CategoryName
+	}
+	if b.WalletID != nil {
+		pb.WalletId = *b.WalletID
+	}
+
+	return pb
 }

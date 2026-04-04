@@ -33,6 +33,7 @@ func SetupGRPCServer(dbInstance db.DatabaseClient, minioInstance *miniofs.MinIOM
 	categoryRepo := repository.NewCategoryRepository(dbInstance.GetDB())
 	attachmentRepo := repository.NewAttachmentsRepository(dbInstance.GetDB())
 	outboxRepo := repository.NewOutboxRepository(dbInstance.GetDB())
+	budgetsRepo := repository.NewBudgetsRepository(dbInstance.GetDB())
 
 	// ── gRPC Client (wallet) ──
 	walletClient := grpcclient.NewWalletClient(grpcclient.GetManager().GetWalletClient())
@@ -49,11 +50,13 @@ func SetupGRPCServer(dbInstance db.DatabaseClient, minioInstance *miniofs.MinIOM
 	)
 	categoryService := service.NewCategoriesService(txManager, categoryRepo)
 	attachmentService := service.NewAttachmentsService(txManager, attachmentRepo)
+	budgetsService := service.NewBudgetsService(txManager, budgetsRepo)
 
 	txnServer := &transactionServer{
 		transactionService: transactionService,
 		categoryService:    categoryService,
 		attachmentService:  attachmentService,
+		budgetsService:     budgetsService,
 	}
 	tpb.RegisterTransactionServiceServer(s, txnServer)
 

@@ -139,4 +139,16 @@ const (
 	LogListCategoriesFailed     = "list_categories_failed"
 	LogGetCategoryDetailSuccess = "get_category_detail_success"
 	LogGetCategoryDetailFailed  = "get_category_detail_failed"
+
+	// --- gRPC server handlers (budget) ---
+	LogGetBudgetsFailed    = "grpc_get_budgets_failed"
+	LogGetBudgetsSuccess   = "grpc_get_budgets_success"
+	LogCreateBudgetFailed  = "grpc_create_budget_failed"
+	LogCreateBudgetSuccess = "grpc_create_budget_success"
+	LogUpdateBudgetFailed  = "grpc_update_budget_failed"
+	LogUpdateBudgetSuccess = "grpc_update_budget_success"
+	LogDeleteBudgetFailed  = "grpc_delete_budget_failed"
+	LogDeleteBudgetSuccess = "grpc_delete_budget_success"
+	LogResetBudgetFailed   = "grpc_reset_budget_failed"
+	LogResetBudgetSuccess  = "grpc_reset_budget_success"
 )
